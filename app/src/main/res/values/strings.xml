@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">WechatRobot</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="menu_settings">Settings</string>
+
+
+    <string name="robot_service_name">wechatrobot</string>
+    <string name="accessibility_description">fetch data when wechat is running</string>
+
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="services_demo">Service Demo</string>
+
+</resources>
