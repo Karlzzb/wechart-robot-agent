@@ -31,12 +31,14 @@ public class ServiceWechat extends AccessibilityService {
 
     private List<AccessbilityJob> mAccessbilityJobs;
     private HashMap<String, AccessbilityJob> mPkgAccessbilityJobMap;
+    private ServiceUsbConnection usbConnection;
 
 
     @Override
     public void onCreate() {
         super.onCreate();
 
+        usbConnection = new ServiceUsbConnection();
         mAccessbilityJobs = new ArrayList<>();
         mPkgAccessbilityJobMap = new HashMap<>();
 
@@ -45,7 +47,7 @@ public class ServiceWechat extends AccessibilityService {
                 Object object = clazz.newInstance();
                 if(object instanceof AccessbilityJob) {
                     AccessbilityJob job = (AccessbilityJob) object;
-                    job.onCreateJob(this);
+                    job.onCreateJob(this,usbConnection);
                     mAccessbilityJobs.add(job);
                     mPkgAccessbilityJobMap.put(job.getTargetPackageName(), job);
                 }
@@ -93,6 +95,7 @@ public class ServiceWechat extends AccessibilityService {
 //        Intent localIntent = new Intent();
 //        localIntent.setClass(this, ServiceWechat.class);
 //        startService(localIntent);
+        usbConnection.onDestroy();
     }
 
     @Override
@@ -144,4 +147,6 @@ public class ServiceWechat extends AccessibilityService {
         flags = START_STICKY;
         return super.onStartCommand(intent, flags, startId);
     }
+
+
 }

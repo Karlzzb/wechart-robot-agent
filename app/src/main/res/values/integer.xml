@@ -1,0 +1,5 @@
+<resources>
+    <integer name="socket_connection_retry">3</integer>
+    <integer name="socket_port">10086</integer>
+
+</resources>

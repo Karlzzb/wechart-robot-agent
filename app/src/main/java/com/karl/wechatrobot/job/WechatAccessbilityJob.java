@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import com.karl.wechatrobot.ServiceUsbConnection;
 import com.karl.wechatrobot.ServiceWechat;
 import com.karl.wechatrobot.utils.AccessibilityHelper;
 
@@ -55,8 +56,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     };
 
     @Override
-    public void onCreateJob(ServiceWechat service) {
-        super.onCreateJob(service);
+    public void onCreateJob(ServiceWechat service, ServiceUsbConnection usbConnection) {
+        super.onCreateJob(service, usbConnection);
 
         updatePackageInfo();
 
@@ -67,13 +68,15 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         filter.addAction("android.intent.action.PACKAGE_REMOVED");
 
         getContext().registerReceiver(broadcastReceiver, filter);
+        this.usbConnection = usbConnection;
     }
 
     @Override
     public void onStopJob() {
         try {
             getContext().unregisterReceiver(broadcastReceiver);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
     }
 
     @Override
@@ -89,61 +92,63 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     @Override
     public void onReceiveJob(AccessibilityEvent event) {
         final int eventType = event.getEventType();
-        if(eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
+        if (eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
             Parcelable data = event.getParcelableData();
-            if(data == null || !(data instanceof Notification)) {
+            if (data == null || !(data instanceof Notification)) {
                 return;
             }
             List<CharSequence> texts = event.getText();
-            if(!texts.isEmpty()) {
+            if (!texts.isEmpty()) {
                 String text = String.valueOf(texts.get(0));
             }
-        } else if(eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        } else if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             windowStateHandle(event);
-        } else if(eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+        } else if (eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             windowStateHandle(event);
         }
     }
 
-    /** 是否为群聊天*/
+    /**
+     * 是否为群聊天
+     */
     private boolean isMemberChatUi(AccessibilityNodeInfo nodeInfo) {
-        if(nodeInfo == null) {
+        if (nodeInfo == null) {
             return false;
         }
         String id = "com.tencent.mm:id/ces";
         int wv = getWechatVersion();
-        if(wv <= 680) {
+        if (wv <= 680) {
             id = "com.tencent.mm:id/ew";
-        } else if(wv <= 700) {
+        } else if (wv <= 700) {
             id = "com.tencent.mm:id/cbo";
         }
         String title = null;
         AccessibilityNodeInfo target = AccessibilityHelper.findNodeInfosById(nodeInfo, id);
-        if(target != null) {
+        if (target != null) {
             title = String.valueOf(target.getText());
         }
         List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("返回");
 
-        if(list != null && !list.isEmpty()) {
+        if (list != null && !list.isEmpty()) {
             AccessibilityNodeInfo parent = null;
-            for(AccessibilityNodeInfo node : list) {
-                if(!"android.widget.ImageView".equals(node.getClassName())) {
+            for (AccessibilityNodeInfo node : list) {
+                if (!"android.widget.ImageView".equals(node.getClassName())) {
                     continue;
                 }
                 String desc = String.valueOf(node.getContentDescription());
-                if(!"返回".equals(desc)) {
+                if (!"返回".equals(desc)) {
                     continue;
                 }
                 parent = node.getParent();
                 break;
             }
-            if(parent != null) {
+            if (parent != null) {
                 parent = parent.getParent();
             }
-            if(parent != null) {
-                if( parent.getChildCount() >= 2) {
+            if (parent != null) {
+                if (parent.getChildCount() >= 2) {
                     AccessibilityNodeInfo node = parent.getChild(1);
-                    if("android.widget.TextView".equals(node.getClassName())) {
+                    if ("android.widget.TextView".equals(node.getClassName())) {
                         title = String.valueOf(node.getText());
                     }
                 }
@@ -157,32 +162,32 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void windowStateHandle(AccessibilityEvent event) {
-        if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
+        if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LUCKYMONEY_RECEIVEUI;
-        } else if("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName()) || "android.widget.ListView".equals(event.getClassName())) {
+        } else if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName()) || "android.widget.ListView".equals(event.getClassName())) {
             AccessibilityNodeInfo source = event.getSource();
-            List<AccessibilityNodeInfo> userlist = AccessibilityHelper.findNodeInfosByIdAll(source,"com.tencent.mm:id/baf");
-            List<AccessibilityNodeInfo> moneylist = AccessibilityHelper.findNodeInfosByIdAll(source,"com.tencent.mm:id/baj");
+            List<AccessibilityNodeInfo> userlist = AccessibilityHelper.findNodeInfosByIdAll(source, "com.tencent.mm:id/baf");
+            List<AccessibilityNodeInfo> moneylist = AccessibilityHelper.findNodeInfosByIdAll(source, "com.tencent.mm:id/baj");
             if (userlist == null || moneylist == null) {
                 return;
             }
-            String msg = "===============================\n";
+            String msg = "{\"LuckPeople\" : [";
             for (int i = 0; i < userlist.size(); i++) {
-                userlist.get(i);
-                if(userlist.get(i) != null) {
-                    Log.d("userlist["+i+"]",userlist.get(i).toString());
+                if (userlist.get(i) != null) {
+                    Log.d("userlist[" + i + "]", userlist.get(i).toString());
                 }
-                msg += "【"+userlist.get(i).getText()+"】";
+                msg += "{\"RemarkName\" : \"" + userlist.get(i).getText() + "\",";
 
-                        moneylist.get(i);
-                if(moneylist.get(i) != null) {
-                    Log.d("moneylist["+i+"]",moneylist.get(i).toString());
+                if (moneylist.get(i) != null) {
+                    Log.d("moneylist[" + i + "]", moneylist.get(i).toString());
                 }
-                moneylist.get(i).getText();
-                msg += "抽到【"+moneylist.get(i).getText()+"】\n";
+                msg += "\"Money\": \"" + moneylist.get(i).getText().toString() + "\"}";
+                msg += i == userlist.size() - 1 ? "" : ",";
             }
-            Log.d("【luckmoney message】=",msg);
-        } else if("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {
+            msg += "]}";
+            Log.d("【luckmoney message】=", msg);
+            usbConnection.sendMsg(msg);
+        } else if ("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LAUNCHER;
         } else {
             mCurrentWindow = WINDOW_OTHER;
@@ -193,7 +198,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         AccessibilityNodeInfo current = source;
         while (true) {
             AccessibilityNodeInfo parent = current.getParent();
-            if(parent == null) {
+            if (parent == null) {
                 return null;
             }
 
@@ -206,23 +211,26 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     }
 
 
-
     private Handler getHandler() {
-        if(mHandler == null) {
+        if (mHandler == null) {
             mHandler = new Handler(Looper.getMainLooper());
         }
         return mHandler;
     }
 
-    /** 获取微信的版本*/
+    /**
+     * 获取微信的版本
+     */
     private int getWechatVersion() {
-        if(mWechatPackageInfo == null) {
+        if (mWechatPackageInfo == null) {
             return 0;
         }
         return mWechatPackageInfo.versionCode;
     }
 
-    /** 更新微信包信息*/
+    /**
+     * 更新微信包信息
+     */
     private void updatePackageInfo() {
         try {
             mWechatPackageInfo = getContext().getPackageManager().getPackageInfo(WECHAT_PACKAGENAME, 0);

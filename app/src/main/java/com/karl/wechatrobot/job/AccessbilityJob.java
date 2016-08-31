@@ -1,6 +1,8 @@
 package com.karl.wechatrobot.job;
 
 import android.view.accessibility.AccessibilityEvent;
+
+import com.karl.wechatrobot.ServiceUsbConnection;
 import com.karl.wechatrobot.ServiceWechat;
 
 /**
@@ -12,7 +14,7 @@ import com.karl.wechatrobot.ServiceWechat;
  */
 public interface AccessbilityJob {
     String getTargetPackageName();
-    void onCreateJob(ServiceWechat service);
+    void onCreateJob(ServiceWechat service, ServiceUsbConnection usbConnection);
     void onReceiveJob(AccessibilityEvent event);
     void onStopJob();
     boolean isEnable();
