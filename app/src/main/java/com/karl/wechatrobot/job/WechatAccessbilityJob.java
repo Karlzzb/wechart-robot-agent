@@ -22,7 +22,13 @@ import com.karl.wechatrobot.utils.AccessibilityHelper;
 
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
@@ -32,6 +38,12 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
 
     private static final String BUTTON_CLASS_NAME = "android.widget.Button";
+
+    private Map<String, String> currentPackageInfo;
+
+    private List<String> currentPackageTextList;
+
+    private Integer currentPackageSize;
 
 
     private static final int USE_ID_MIN_VERSION = 700;// 6.3.8 对应code为680,6.3.9对应code为700
@@ -58,6 +70,9 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     @Override
     public void onCreateJob(ServiceWechat service, ServiceUsbConnection usbConnection) {
         super.onCreateJob(service, usbConnection);
+        currentPackageInfo = new LinkedHashMap<>();
+        currentPackageTextList = new ArrayList<String>();
+        currentPackageSize = 0;
 
         updatePackageInfo();
 
@@ -159,38 +174,108 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         return title != null && title.endsWith(")");
     }
 
+    /**
+     * 拆红包
+     */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    private void getPacket(AccessibilityNodeInfo nodeInfo) {
+        if (nodeInfo == null) {
+            return;
+        }
+        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("看看大家的手气");
+        for (AccessibilityNodeInfo n : list) {
+            n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        }
+    }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void windowStateHandle(AccessibilityEvent event) {
         if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LUCKYMONEY_RECEIVEUI;
+            getPacket(event.getSource());
         } else if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName()) || "android.widget.ListView".equals(event.getClassName())) {
             AccessibilityNodeInfo source = event.getSource();
-            List<AccessibilityNodeInfo> userlist = AccessibilityHelper.findNodeInfosByIdAll(source, "com.tencent.mm:id/baf");
-            List<AccessibilityNodeInfo> moneylist = AccessibilityHelper.findNodeInfosByIdAll(source, "com.tencent.mm:id/baj");
-            if (userlist == null || moneylist == null) {
+            if (source == null) {
+                Log.i(TAG, "noteInfo is　null");
+                return;
+            } else {
+                currentPackageTextList.clear();
+                recycle(source);
+            }
+            reviewPackageRaw();
+            if (currentPackageInfo == null || currentPackageSize.compareTo(0) == 0 || currentPackageInfo.size() < currentPackageSize) {
                 return;
             }
             String msg = "{\"LuckPeople\" : [";
-            for (int i = 0; i < userlist.size(); i++) {
-                if (userlist.get(i) != null) {
-                    Log.d("userlist[" + i + "]", userlist.get(i).toString());
+            int i = 0;
+            for (String key : currentPackageInfo.keySet()) {
+                if (currentPackageInfo.get(key) != null) {
+                    msg += "{\"RemarkName\" : \"" + key + "\",";
+                    msg += "\"Money\": \"" + currentPackageInfo.get(key) + "\"}";
                 }
-                msg += "{\"RemarkName\" : \"" + userlist.get(i).getText() + "\",";
-
-                if (moneylist.get(i) != null) {
-                    Log.d("moneylist[" + i + "]", moneylist.get(i).toString());
-                }
-                msg += "\"Money\": \"" + moneylist.get(i).getText().toString() + "\"}";
-                msg += i == userlist.size() - 1 ? "" : ",";
+                msg += i == currentPackageInfo.keySet().size() - 1 ? "" : ",";
+                i++;
             }
             msg += "]}";
-            Log.d("【luckmoney message】=", msg);
-            usbConnection.sendMsg(msg);
+            Log.i("【luckmoney message】=", msg);
+            //// TODO: 2016/9/24
+//            usbConnection.sendMsg(msg);
+            currentPackageInfo.clear();
         } else if ("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LAUNCHER;
         } else {
             mCurrentWindow = WINDOW_OTHER;
+        }
+    }
+
+    private void recycle(AccessibilityNodeInfo info) {
+        if (info.getChildCount() == 0) {
+        } else {
+            AccessibilityNodeInfo subInfo = null;
+            for (int i = 0; i < info.getChildCount(); i++) {
+                if (info.getChild(i) != null) {
+                    subInfo = info.getChild(i);
+                    Log.d(TAG, "child widget----------------------------" + i + "|" + subInfo.getClassName());
+                    Log.d(TAG, "showDialog:i" + i + "|" + subInfo.canOpenPopup());
+                    Log.d(TAG, "Text：i " + i + "|" + subInfo.getText());
+                    Log.d(TAG, "windowId: i " + i + "|" + subInfo.getWindowId());
+                    if (subInfo.getText() != null && !subInfo.getText().toString().isEmpty()) {
+                        currentPackageTextList.add(subInfo.getText().toString());
+                    }
+                    recycle(info.getChild(i));
+                }
+            }
+        }
+    }
+
+    private void reviewPackageRaw() {
+        if (currentPackageTextList == null || currentPackageTextList.size() < 1) {
+            return;
+        }
+        String text = "";
+        for (int i = 0; i < currentPackageTextList.size(); i++) {
+            text = currentPackageTextList.get(i);
+            if (text == null || text.isEmpty()) {
+                continue;
+            }
+            Pattern patternSize = Pattern
+                    .compile("^([0-9]+)个红包，([0-9]+)秒被抢光$");
+            Matcher matcherSize = patternSize.matcher(text);
+            if (matcherSize.matches()) {
+                this.currentPackageSize = Integer.valueOf(matcherSize.group(1));
+                Log.i(TAG, "The current packageSize is：" + text);
+                continue;
+            }
+            Pattern patternMony = Pattern
+                    .compile("^([0-9]+\\.[0-9]+)元$");
+            Matcher matcherMoney = patternMony.matcher(text);
+            if (matcherMoney.matches()) {
+                if (!currentPackageInfo.containsKey(currentPackageTextList.get(i - 2))) {
+                    this.currentPackageInfo.put(currentPackageTextList.get(i - 2), matcherMoney.group(1));
+                    Log.i(TAG, "User Package info ：Name=" + currentPackageTextList.get(i - 2).toString() + ", Money=" + matcherMoney.group(1));
+                }
+            }
+
         }
     }
 
