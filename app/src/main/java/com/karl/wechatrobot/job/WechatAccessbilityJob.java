@@ -19,11 +19,9 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import com.karl.wechatrobot.ServiceUsbConnection;
 import com.karl.wechatrobot.ServiceWechat;
 import com.karl.wechatrobot.utils.AccessibilityHelper;
+import com.karl.wechatrobot.utils.PackageDomain;
 
-import java.io.OutputStream;
-import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +37,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     private static final String BUTTON_CLASS_NAME = "android.widget.Button";
 
-    private Map<String, String> currentPackageInfo;
+    private Map<String, PackageDomain> currentPackageInfo;
 
     private List<String> currentPackageTextList;
 
@@ -192,7 +190,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     private void windowStateHandle(AccessibilityEvent event) {
         if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LUCKYMONEY_RECEIVEUI;
-            getPacket(event.getSource());
+//            getPacket(event.getSource());
         } else if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName()) || "android.widget.ListView".equals(event.getClassName())) {
             AccessibilityNodeInfo source = event.getSource();
             if (source == null) {
@@ -203,6 +201,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                 recycle(source);
             }
             reviewPackageRaw();
+
+
             if (currentPackageInfo == null || currentPackageSize.compareTo(0) == 0 || currentPackageInfo.size() < currentPackageSize) {
                 return;
             }
@@ -211,7 +211,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             for (String key : currentPackageInfo.keySet()) {
                 if (currentPackageInfo.get(key) != null) {
                     msg += "{\"RemarkName\" : \"" + key + "\",";
-                    msg += "\"Money\": \"" + currentPackageInfo.get(key) + "\"}";
+                    msg += "\"Time\" : \"" + currentPackageInfo.get(key).getTimeStr() + "\",";
+                    msg += "\"Money\": \"" + currentPackageInfo.get(key).getMoneyStr() + "\"}";
                 }
                 msg += i == currentPackageInfo.keySet().size() - 1 ? "" : ",";
                 i++;
@@ -219,7 +220,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             msg += "]}";
             Log.i("【luckmoney message】=", msg);
             //// TODO: 2016/9/24
-//            usbConnection.sendMsg(msg);
+            usbConnection.sendMsg(msg);
             currentPackageInfo.clear();
         } else if ("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LAUNCHER;
@@ -259,7 +260,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                 continue;
             }
             Pattern patternSize = Pattern
-                    .compile("^([0-9]+)个红包，([0-9]+)秒被抢光$");
+                    .compile("^([0-9]+)个红包.*([0-9]+).*被抢光$");
             Matcher matcherSize = patternSize.matcher(text);
             if (matcherSize.matches()) {
                 this.currentPackageSize = Integer.valueOf(matcherSize.group(1));
@@ -271,7 +272,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             Matcher matcherMoney = patternMony.matcher(text);
             if (matcherMoney.matches()) {
                 if (!currentPackageInfo.containsKey(currentPackageTextList.get(i - 2))) {
-                    this.currentPackageInfo.put(currentPackageTextList.get(i - 2), matcherMoney.group(1));
+                    this.currentPackageInfo.put(currentPackageTextList.get(i - 2), new PackageDomain(currentPackageTextList.get(i - 2).toString(), String.valueOf(matcherMoney.group(1)), currentPackageTextList.get(i - 1).toString()));
                     Log.i(TAG, "User Package info ：Name=" + currentPackageTextList.get(i - 2).toString() + ", Money=" + matcherMoney.group(1));
                 }
             }
@@ -323,4 +324,5 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             e.printStackTrace();
         }
     }
+
 }

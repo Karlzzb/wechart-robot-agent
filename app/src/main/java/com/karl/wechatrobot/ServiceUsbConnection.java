@@ -14,7 +14,7 @@ public class ServiceUsbConnection{
     public static Boolean mainThreadFlag = true;
     public static int retryTimes = R.integer.socket_connection_retry;
     private ServerSocket serverSocket;
-    private static final int SERVER_PORT = 10086;
+    private static final int SERVER_PORT = 62001;
     private Socket client;
 
     public ServiceUsbConnection() {

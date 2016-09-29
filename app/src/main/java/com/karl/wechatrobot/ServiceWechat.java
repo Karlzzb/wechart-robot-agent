@@ -5,6 +5,11 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.usb.UsbConstants;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbEndpoint;
+import android.hardware.usb.UsbInterface;
+import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -147,6 +152,7 @@ public class ServiceWechat extends AccessibilityService {
         flags = START_STICKY;
         return super.onStartCommand(intent, flags, startId);
     }
+
 
 
 }
