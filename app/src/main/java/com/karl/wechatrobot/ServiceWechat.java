@@ -3,6 +3,8 @@ package com.karl.wechatrobot;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.TargetApi;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbConstants;
@@ -28,7 +30,10 @@ import java.util.List;
 public class ServiceWechat extends AccessibilityService {
     private static final String TAG = "WeRobot";
 
-    private static ServiceWechat service;
+//    private static ServiceWechat service;
+    PendingIntent mPendingIntent = null;
+
+    AlarmManager mAlarmManager = null;
 
     private static final Class[] ACCESSBILITY_JOBS= {
             WechatAccessbilityJob.class
@@ -60,6 +65,14 @@ public class ServiceWechat extends AccessibilityService {
                 e.printStackTrace();
             }
         }
+
+        //start the service through alarm repeatly
+        Intent intent = new Intent(getApplicationContext(), ServiceWechat.class);
+        mAlarmManager = (AlarmManager)getSystemService(ALARM_SERVICE);
+        mPendingIntent = PendingIntent.getService(this, 0, intent, Intent.FILL_IN_ACTION);
+        long now = System.currentTimeMillis();
+        mAlarmManager.setInexactRepeating(AlarmManager.RTC, now, 60000, mPendingIntent);
+
     }
 
     @Override
@@ -91,7 +104,6 @@ public class ServiceWechat extends AccessibilityService {
             mAccessbilityJobs.clear();
         }
 
-        service = null;
         mAccessbilityJobs = null;
         mPkgAccessbilityJobMap = null;
         //发送广播，已经断开辅助服务
@@ -112,7 +124,7 @@ public class ServiceWechat extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-        service = this;
+//        service = this;
         //发送广播，已经连接上了
 //        Intent intent = new Intent(Config.ACTION_QIANGHONGBAO_SERVICE_CONNECT);
 //        sendBroadcast(intent);
@@ -122,35 +134,35 @@ public class ServiceWechat extends AccessibilityService {
     /**
      * 判断当前服务是否正在运行
      * */
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    public static boolean isRunning() {
-        if(service == null) {
-            return false;
-        }
-        AccessibilityManager accessibilityManager = (AccessibilityManager) service.getSystemService(Context.ACCESSIBILITY_SERVICE);
-        AccessibilityServiceInfo info = service.getServiceInfo();
-        if(info == null) {
-            return false;
-        }
-        List<AccessibilityServiceInfo> list = accessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC);
-        Iterator<AccessibilityServiceInfo> iterator = list.iterator();
-
-        boolean isConnect = false;
-        while (iterator.hasNext()) {
-            AccessibilityServiceInfo i = iterator.next();
-            if(i.getId().equals(info.getId())) {
-                isConnect = true;
-                break;
-            }
-        }
-        return isConnect;
-    }
+//    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+//    public static boolean isRunning() {
+//        if(service == null) {
+//            return false;
+//        }
+//        AccessibilityManager accessibilityManager = (AccessibilityManager) service.getSystemService(Context.ACCESSIBILITY_SERVICE);
+//        AccessibilityServiceInfo info = service.getServiceInfo();
+//        if(info == null) {
+//            return false;
+//        }
+//        List<AccessibilityServiceInfo> list = accessibilityManager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC);
+//        Iterator<AccessibilityServiceInfo> iterator = list.iterator();
+//
+//        boolean isConnect = false;
+//        while (iterator.hasNext()) {
+//            AccessibilityServiceInfo i = iterator.next();
+//            if(i.getId().equals(info.getId())) {
+//                isConnect = true;
+//                break;
+//            }
+//        }
+//        return isConnect;
+//    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.v("ServiceWechat","startCommand");
-        flags = START_STICKY;
-        return super.onStartCommand(intent, flags, startId);
+        return START_STICKY;
+        //return super.onStartCommand(intent, flags, startId);
     }
 
 
