@@ -14,13 +14,13 @@ import com.karl.wechatrobot.ServiceWechat;
  */
 public abstract class BaseAccessbilityJob implements AccessbilityJob {
 
-    private ServiceWechat service;
-    protected ServiceUsbConnection usbConnection;
+    protected ServiceWechat service;
+//    protected ServiceUsbConnection usbConnection;
 
     @Override
     public void onCreateJob(ServiceWechat service, ServiceUsbConnection usbConnection) {
         this.service = service;
-        this.usbConnection = usbConnection;
+//        this.usbConnection = usbConnection;
     }
 
     public Context getContext() {

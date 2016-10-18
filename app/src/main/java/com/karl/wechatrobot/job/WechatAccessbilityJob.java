@@ -2,6 +2,7 @@ package com.karl.wechatrobot.job;
 
 import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -54,6 +55,8 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     private int mCurrentWindow = WINDOW_NONE;
 
+    private  String msg;
+
     private boolean isReceivingHongbao;
     private PackageInfo mWechatPackageInfo = null;
     private Handler mHandler = null;
@@ -81,7 +84,7 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
         filter.addAction("android.intent.action.PACKAGE_REMOVED");
 
         getContext().registerReceiver(broadcastReceiver, filter);
-        this.usbConnection = usbConnection;
+//        this.usbConnection = usbConnection;
     }
 
     @Override
@@ -203,31 +206,89 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             reviewPackageRaw();
 
 
-            if (currentPackageInfo == null || currentPackageSize.compareTo(0) == 0 || currentPackageInfo.size() < currentPackageSize) {
+//            if (currentPackageInfo == null || currentPackageSize.compareTo(0) == 0 || currentPackageInfo.size() < currentPackageSize) {
+//                return;
+//            }
+            //constructMsg();
+            if (currentPackageInfo == null || currentPackageInfo.size() == 0) {
                 return;
             }
-            String msg = "{\"LuckPeople\" : [";
-            int i = 0;
-            for (String key : currentPackageInfo.keySet()) {
-                if (currentPackageInfo.get(key) != null) {
-                    msg += "{\"RemarkName\" : \"" + key + "\",";
-                    msg += "\"Time\" : \"" + currentPackageInfo.get(key).getTimeStr() + "\",";
-                    msg += "\"Money\": \"" + currentPackageInfo.get(key).getMoneyStr() + "\"}";
-                }
-                msg += i == currentPackageInfo.keySet().size() - 1 ? "" : ",";
-                i++;
-            }
-            msg += "]}";
+
+            constructMsgNormal();
             Log.i("【luckmoney message】=", msg);
-            //// TODO: 2016/9/24
-            usbConnection.sendMsg(msg);
-            currentPackageInfo.clear();
+            //// TODO:
+//            usbConnection.sendMsg(msg);
+            //currentPackageInfo.clear();
         } else if ("com.tencent.mm.ui.LauncherUI".equals(event.getClassName())) {
+            sendNotifacationReply(event);
             mCurrentWindow = WINDOW_LAUNCHER;
+            if(service.fill(msg)) {
+                service.send();
+                currentPackageInfo.clear();
+                msg = null;
+            }
         } else {
             mCurrentWindow = WINDOW_OTHER;
         }
     }
+
+    private void constructMsg() {
+        msg = "{\"LuckPeople\" : [";
+        int i = 0;
+        for (String key : currentPackageInfo.keySet()) {
+            if (currentPackageInfo.get(key) != null) {
+                msg += "{\"RemarkName\" : \"" + key + "\",";
+                msg += "\"Time\" : \"" + currentPackageInfo.get(key).getTimeStr() + "\",";
+                msg += "\"Money\": \"" + currentPackageInfo.get(key).getMoneyStr() + "\"}";
+            }
+            msg += i == currentPackageInfo.keySet().size() - 1 ? "" : ",";
+            i++;
+        }
+        msg += "]}";
+    }
+
+    private void constructMsgNormal() {
+        msg = "【包信息】：\n";
+        int i = 0;
+        for (String key : currentPackageInfo.keySet()) {
+            if (currentPackageInfo.get(key) != null) {
+                msg += (i+1) + "位: ";
+                msg += key + ", ";
+                msg += currentPackageInfo.get(key).getMoneyStr()+ ", ";
+                msg += currentPackageInfo.get(key).getTimeStr();
+            }
+            msg += i == currentPackageInfo.keySet().size() - 1 ? "" : "\n";
+            i++;
+        }
+    }
+
+    /**
+     * 拉起微信界面
+     * @param event
+     */
+    private void sendNotifacationReply(AccessibilityEvent event) {
+        if (event.getParcelableData() != null
+                && event.getParcelableData() instanceof Notification) {
+            Notification notification = (Notification) event
+                    .getParcelableData();
+            String content = notification.tickerText.toString();
+            String[] cc = content.split(":");
+            service.setName(cc[0].trim());
+            service.setScontent(cc[1].trim());
+
+            android.util.Log.i("maptrix", "sender name =" + service.getName());
+            android.util.Log.i("maptrix", "sender content =" + service.getScontent());
+
+
+            PendingIntent pendingIntent = notification.contentIntent;
+            try {
+                pendingIntent.send();
+            } catch (PendingIntent.CanceledException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     private void recycle(AccessibilityNodeInfo info) {
         if (info.getChildCount() == 0) {
