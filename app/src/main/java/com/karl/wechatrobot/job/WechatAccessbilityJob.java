@@ -25,6 +25,7 @@ import com.karl.wechatrobot.utils.PackageDomain;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -249,15 +250,17 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
 
     private void constructMsgNormal() {
         msg = "【包信息】：\n";
-        int i = 0;
-        for (String key : currentPackageInfo.keySet()) {
+        int i = 1;
+        ListIterator<Map.Entry<String,PackageDomain>> entryListIterator =new ArrayList<Map.Entry<String,PackageDomain>>(currentPackageInfo.entrySet()).listIterator(currentPackageInfo.size());
+        while(entryListIterator.hasPrevious()) {
+            String key = entryListIterator.previous().getKey();
             if (currentPackageInfo.get(key) != null) {
-                msg += (i+1) + "位: ";
+                msg += (i) + "位: ";
                 msg += key + ", ";
                 msg += currentPackageInfo.get(key).getMoneyStr()+ ", ";
                 msg += currentPackageInfo.get(key).getTimeStr();
             }
-            msg += i == currentPackageInfo.keySet().size() - 1 ? "" : "\n";
+            msg += i == currentPackageInfo.keySet().size() ? "" : "\n";
             i++;
         }
     }
