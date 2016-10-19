@@ -119,9 +119,9 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
                 String text = String.valueOf(texts.get(0));
             }
         } else if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            windowStateHandle(event);
+            windowStateHandle(event, eventType);
         } else if (eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            windowStateHandle(event);
+            windowStateHandle(event, eventType);
         }
     }
 
@@ -191,11 +191,15 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private void windowStateHandle(AccessibilityEvent event) {
+    private void windowStateHandle(AccessibilityEvent event, int eventType) {
         if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI".equals(event.getClassName())) {
             mCurrentWindow = WINDOW_LUCKYMONEY_RECEIVEUI;
-            getPacket(event.getSource());
+            //getPacket(event.getSource());
         } else if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName()) || "android.widget.ListView".equals(event.getClassName())) {
+            if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                currentPackageInfo.clear();
+                msg = null;
+            }
             AccessibilityNodeInfo source = event.getSource();
             if (source == null) {
                 Log.i(TAG, "noteInfo is　null");

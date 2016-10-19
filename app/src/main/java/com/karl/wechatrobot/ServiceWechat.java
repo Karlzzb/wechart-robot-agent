@@ -10,6 +10,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbEndpoint;
@@ -17,6 +18,7 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Config;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
@@ -35,7 +37,7 @@ import java.util.List;
 
 
 public class ServiceWechat extends AccessibilityService {
-    private static final String TAG = "WeRobot";
+    public static final String TAG = "WeRobot";
 
 //    private static ServiceWechat service;
     PendingIntent mPendingIntent = null;
@@ -102,6 +104,10 @@ public class ServiceWechat extends AccessibilityService {
         long now = System.currentTimeMillis();
         mAlarmManager.setInexactRepeating(AlarmManager.RTC, now, 60000, mPendingIntent);
 
+        //broadcast
+        IntentFilter filter = new IntentFilter(Intent.ACTION_TIME_TICK);
+        ServiceBroadcastReceiver receiver = new ServiceBroadcastReceiver();
+        registerReceiver(receiver, filter);
     }
 
     /**
@@ -244,10 +250,6 @@ public class ServiceWechat extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
 //        service = this;
-        //发送广播，已经连接上了
-//        Intent intent = new Intent(Config.ACTION_QIANGHONGBAO_SERVICE_CONNECT);
-//        sendBroadcast(intent);
-//        Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -279,9 +281,7 @@ public class ServiceWechat extends AccessibilityService {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.v("ServiceWechat","startCommand");
-        return START_STICKY;
-        //return super.onStartCommand(intent, flags, startId);
+        return super.onStartCommand(intent, START_STICKY, startId);
     }
 
 
