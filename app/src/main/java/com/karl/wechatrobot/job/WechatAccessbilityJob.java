@@ -196,10 +196,6 @@ public class WechatAccessbilityJob extends BaseAccessbilityJob {
             mCurrentWindow = WINDOW_LUCKYMONEY_RECEIVEUI;
             //getPacket(event.getSource());
         } else if ("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI".equals(event.getClassName()) || "android.widget.ListView".equals(event.getClassName())) {
-            if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                currentPackageInfo.clear();
-                msg = null;
-            }
             AccessibilityNodeInfo source = event.getSource();
             if (source == null) {
                 Log.i(TAG, "noteInfo is　null");
